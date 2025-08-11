@@ -1,0 +1,17 @@
+Django==4.2.21
+django-filter==24.3
+celery
+django-celery-beat
+psycopg2-binary
+mysql-connector-python
+mysqlclient
+python-dotenv
+djangorestframework
+cx_Oracle
+mysqlclient==2.2.4
+eventlet
+redis
+flower
+django-import-export
+django-jazzmin
+openpyxl

@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # MySQL数据库
+  mysql:
+    image: mysql:8.0
+    container_name: dbq-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dbq_db
+      MYSQL_USER: dbq_user
+      MYSQL_PASSWORD: dbq_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql_init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dbq-network
+
+  # Redis缓存
+  redis:
+    image: redis:6-alpine
+    container_name: dbq-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - dbq-network
+
+  # Django应用
+  web:
+    build: .
+    container_name: dbq-web
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DEBUG=0
+      - DATABASE_URL=mysql://dbq_user:dbq_password@mysql:3306/dbq_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-here
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    ports:
+      - "8000:8000"
+    networks:
+      - dbq-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn dbq_project.wsgi:application --bind 0.0.0.0:8000"
+
+  # Celery Worker
+  celery-worker:
+    build: .
+    container_name: dbq-celery-worker
+    restart: always
+    depends_on:
+      - web
+      - redis
+    environment:
+      - DEBUG=0
+      - DATABASE_URL=mysql://dbq_user:dbq_password@mysql:3306/dbq_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-here
+    volumes:
+      - .:/app
+      - logs_volume:/app/logs
+    networks:
+      - dbq-network
+    command: celery -A dbq_project worker -l info
+
+  # Celery Beat
+  celery-beat:
+    build: .
+    container_name: dbq-celery-beat
+    restart: always
+    depends_on:
+      - web
+      - redis
+    environment:
+      - DEBUG=0
+      - DATABASE_URL=mysql://dbq_user:dbq_password@mysql:3306/dbq_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-here
+    volumes:
+      - .:/app
+      - logs_volume:/app/logs
+    networks:
+      - dbq-network
+    command: celery -A dbq_project beat -l info
+
+  # 日志聚合
+  log-viewer:
+    build: .
+    container_name: dbq-log-viewer
+    restart: always
+    depends_on:
+      - web
+    volumes:
+      - logs_volume:/app/logs
+    networks:
+      - dbq-network
+    command: tail -f /app/logs/combined.log
+
+volumes:
+  mysql_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  logs_volume:
+
+networks:
+  dbq-network:
+    driver: bridge
