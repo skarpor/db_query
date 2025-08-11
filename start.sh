@@ -3,6 +3,10 @@
 # 确保日志目录存在
 mkdir -p /app/logs
 
+# 数据库迁移
+python manage.py makemigrations
+python manage.py migrate
+
 # 启动多进程并合并日志
 
 # 启动Django应用并将日志输出到文件
