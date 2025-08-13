@@ -17,7 +17,7 @@ import subprocess
 import sys
 from io import StringIO
 from import_export.admin import ImportExportModelAdmin
-
+import oracledb
 
 # class NotificationConfigInline(admin.TabularInline):
 #     model = NotificationConfig
@@ -130,7 +130,8 @@ class ExecutionResultAdmin(ImportExportModelAdmin):
 
     def view_result_link(self, obj):
         if obj.status == 'success' and obj.result_data:
-            return format_html('<a href="javascript:void(0)" onclick="showResult({})">查看结果</a>', json.dumps(obj.result_data))
+            return format_html('<a href="/" target="_blank">查看结果</a>', json.dumps(obj.result_data)) 
+
         return '无结果'
     view_result_link.short_description = '查看结果'
 
@@ -185,6 +186,12 @@ def test_database_connection(request, connection_id):
         elif connection.db_type == 'sqlite':
             conn = sqlite3.connect(connection.database)
             conn.close()
+        # oracle
+        elif connection.db_type == 'oracle':
+            dsn = oracledb.makedsn(connection.host, connection.port, service_name=connection.database)
+            conn = oracledb.connect(user=connection.username, password=connection.password, dsn=dsn, timeout=connection.timeout)
+            conn.close()
+
         else:
             raise Exception(f"不支持的数据库类型: {connection.db_type}")
         execution_time = time.time() - start_time

@@ -19,4 +19,4 @@ celery -A dbq_project worker -l info > /app/logs/celery_worker.log 2>&1 &
 celery -A dbq_project beat -l info > /app/logs/celery_beat.log 2>&1 &
 
 # 合并所有日志并输出到前台
- tail -f /app/logs/*.log | tee /app/logs/combined.log
+ tail -f /app/logs/*.log

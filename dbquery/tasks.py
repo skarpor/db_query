@@ -4,7 +4,7 @@ import time
 import json
 import logging
 import pymysql
-import cx_Oracle
+import oracledb
 from datetime import datetime
 from django.core.mail import send_mail
 from django.conf import settings
@@ -50,15 +50,15 @@ def execute_query(self, query_instance_id):
                 )
                 with conn.cursor(pymysql.cursors.DictCursor) as cursor:
                     cursor.execute(sql)
-                    result_data = cursor.fetchall()
+                    result_data = cursor.fetchmany(1000)
                 conn.close()
             elif connection.db_type == 'oracle':
-                dsn = cx_Oracle.makedsn(connection.host, connection.port, service_name=connection.database)
-                conn = cx_Oracle.connect(user=connection.username, password=connection.password, dsn=dsn, timeout=connection.timeout)
+                dsn = oracledb.makedsn(connection.host, connection.port, service_name=connection.database)
+                conn = oracledb.connect(user=connection.username, password=connection.password, dsn=dsn, timeout=connection.timeout)
                 with conn.cursor() as cursor:
                     cursor.execute(sql)
                     columns = [col[0] for col in cursor.description]
-                    result_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                    result_data = [dict(zip(columns, row)) for row in cursor.fetchmany(1000)]
                 conn.close()
             # postgresql 数据库,使用 psycopg2 库
             elif connection.db_type == 'postgresql':
@@ -75,7 +75,7 @@ def execute_query(self, query_instance_id):
                 )
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:  # 使用RealDictCursor直接返回字典
                     cursor.execute(sql)
-                    result_data = cursor.fetchall()
+                    result_data = cursor.fetchmany(1000)
                 conn.close()
             elif connection.db_type == 'sqlserver':
                 import pyodbc
@@ -90,7 +90,7 @@ def execute_query(self, query_instance_id):
                 with conn.cursor() as cursor:
                     cursor.execute(sql)
                     columns = [col[0] for col in cursor.description]
-                    result_data = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                    result_data = [dict(zip(columns, row)) for row in cursor.fetchmany(1000)]
                 conn.close()
 
             else:

@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库查询系统</title>
+    <!-- 引入Vue.js -->
+    <script src="/static/js/vue.global.prod.js"></script>
+    <!-- 引入Element Plus -->
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="/static/js/index.full.js"></script>
+    <!-- 引入Axios -->
+    <script src="/static/js/axios.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .app-header {
+            background-color: #1890ff;
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .app-header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .app-main {
+            flex: 1;
+            padding: 24px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+        .app-footer {
+            text-align: center;
+            padding: 16px;
+            color: #999;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        .query-results-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .page-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 250px;
+        }
+        .filter-dropdowns select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .results-table-container {
+            margin-bottom: 20px;
+            overflow-x: auto;
+            width: 100%;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #eee;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .results-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+            color: #333;
+        }
+        .results-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-badge.success {
+            background-color: #f0f9eb;
+            color: #67c23a;
+        }
+        .status-badge.failed {
+            background-color: #fef0f0;
+            color: #f56c6c;
+        }
+        .action-buttons button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .action-buttons button:hover {
+            background-color: #40a9ff;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .pagination-container button {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .pagination-container button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .pagination-container span {
+            margin: 0 10px;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-body {
+            padding: 24px;
+        }
+        .result-info p {
+            margin: 8px 0;
+        }
+        .error-message {
+            margin-top: 16px;
+            padding: 12px;
+            background-color: #fef0f0;
+            border-radius: 4px;
+        }
+        .error-message h3 {
+            margin-top: 0;
+            color: #f56c6c;
+            font-size: 16px;
+        }
+        .error-message pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #f56c6c;
+        }
+        .data-table-container {
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .no-results,
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+        .failed-row {
+            background-color: #fef0f0;
+        }
+        .el-table__header, 
+        .el-table__body {
+            width: 100% !important;
+        }
+        /* 新增样式 */
+        .view-switcher {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .json-view {
+            background-color: #f8f8f8;
+            border: 1px solid #eaeaea;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow: auto;
+        }
+        .json-key {
+            color: #881391;
+        }
+        .json-string {
+            color: #c41a16;
+        }
+        .json-number {
+            color: #1c00cf;
+        }
+        .json-boolean {
+            color: #0d22aa;
+        }
+        .json-null {
+            color: #666;
+        }
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .data-info {
+            color: #666;
+            font-size: 14px;
+        }
+        .column-filter {
+            margin-bottom: 10px;
+        }
+        .result-count {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        /* 新增按钮样式 */
+        .copy-btn {
+            margin-left: 10px;
+            background-color: #67c23a !important;
+        }
+        .copy-btn:hover {
+            background-color: #85ce61 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="app-container">
+        <header class="app-header">
+            <h1>数据库查询系统</h1>
+        </header>
+        <main class="app-main">
+            <div class="query-results-container">
+                <h1 class="page-title">查询结果</h1>
+
+                <div class="filter-container">
+                    <div class="search-box">
+                        <el-input
+                            v-model="searchQuery"
+                            placeholder="搜索查询实例..."
+                            @input="debounceSearch"
+                            style="width: 250px;"
+                        ></el-input>
+                    </div>
+
+                    <div class="filter-dropdowns">
+                        <el-button type="primary" icon="Refresh" @click="refreshData">刷新</el-button>
+                        <el-select v-model="statusFilter" @change="fetchResults" placeholder="所有状态" style="margin-left: 10px; width: 120px;">
+                            <el-option value="">所有状态</el-option>
+                            <el-option value="success">成功</el-option>
+                            <el-option value="failed">失败</el-option>
+                        </el-select>
+
+                        <el-select v-model="instanceFilter" @change="fetchResults" placeholder="所有查询实例" style="margin-left: 10px; width: 180px;">
+                            <el-option value="">所有查询实例</el-option>
+                            <el-option v-for="instance in queryInstances" :key="instance.id" :value="instance.name">
+                                {{ instance.name }}
+                            </el-option>
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="results-table-container" style="width: 100%;">
+                    <el-table :data="results" stripe style="width: 100%">
+                        <el-table-column prop="query_instance_name" label="查询实例" width="200"></el-table-column>
+                        <el-table-column prop="status" label="状态" width="100">
+                            <template #default="scope">
+                                <span :class="['status-badge', scope.row.status]">
+                                    {{ scope.row.status === 'success' ? '成功' : '失败' }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="created_at" label="执行时间" width="180">
+                            <template #default="scope">
+                                {{ formatDate(scope.row.created_at) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="execution_time" label="耗时(秒)" width="100">
+                            <template #default="scope">
+                                {{ scope.row.execution_time.toFixed(2) }}
+                            </template>
+                        </el-table-column>
+    <el-table-column label="操作" width="220">
+        <template #default="scope">
+            <el-button type="primary" size="small" @click="viewResult(scope.row.id)">查看</el-button>
+            <el-button v-if="scope.row.status === 'success'" type="success" size="small" @click="exportResult(scope.row)">导出CSV</el-button>
+            <el-button v-if="scope.row.status === 'success'" type="success" size="small" class="copy-btn" @click="copyTableData(scope.row)">复制数据</el-button>
+        </template>
+    </el-table-column>
+                    </el-table>
+
+                    <div v-if="results.length === 0 && !loading" class="no-results">暂无结果</div>
+                    <div v-if="loading" class="loading">加载中...</div>
+                </div>
+
+                <div class="pagination-container">
+                    <el-pagination
+                        v-model:current-page="pagination.current_page"
+                        v-model:page-size="pagination.page_size"
+                        :page-sizes="[10, 20, 50]"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        :total="pagination.total_count"
+                        @size-change="handleSizeChange"
+                        @current-change="handleCurrentChange"
+                    />
+                </div>
+            </div>
+
+            <!-- 结果详情弹窗 -->
+            <el-dialog v-model="showDetail" title="查询结果详情" width="80%" :close-on-click-modal="false">
+                <div v-if="loadingDetail" class="loading">加载中...</div>
+                <div v-else-if="currentResult">
+                    <div class="result-info">
+                        <p><strong>查询实例:</strong> {{ currentResult.query_instance_name }}</p>
+                        <p><strong>状态:</strong> <span :class="['status-badge', currentResult.status]">{{ currentResult.status === 'success' ? '成功' : '失败' }}</span></p>
+                        <p><strong>执行时间:</strong> {{ formatDate(currentResult.created_at) }}</p>
+                        <p><strong>耗时:</strong> {{ currentResult.execution_time.toFixed(2) }} 秒</p>
+                    </div>
+
+                    <div v-if="currentResult.status === 'failed'" class="error-message">
+                        <h3>错误信息:</h3>
+                        <pre>{{ currentResult.error_message }}</pre>
+                    </div>
+
+                    <div v-else-if="currentResult.result_data && currentResult.result_data.length > 0">
+                        <div class="data-header">
+                            <div class="data-info">
+                                共 {{ currentResult.result_data.length }} 条记录
+                            </div>
+                                            <div>
+                    <el-button type="success" size="small" @click="exportCurrentData()">导出CSV</el-button>
+                    <el-button type="success" size="small" class="copy-btn" @click="copyCurrentData()">复制数据</el-button>
+
+                            <div class="view-switcher">
+                                <el-radio-group v-model="detailViewMode" size="small">
+                                    <el-radio-button label="table">表格视图</el-radio-button>
+                                    <el-radio-button label="json">JSON视图</el-radio-button>
+                                </el-radio-group>
+                            </div>
+                        </div>
+</div>
+                        <div v-if="detailViewMode === 'table'">
+                            <div class="column-filter">
+                                <el-select
+                                    v-model="selectedColumns"
+                                    multiple
+                                    collapse-tags
+                                    collapse-tags-tooltip
+                                    placeholder="选择要显示的列"
+                                    style="width: 100%"
+                                >
+                                    <el-option
+                                        v-for="column in allColumns"
+                                        :key="column"
+                                        :label="column"
+                                        :value="column"
+                                    />
+                                </el-select>
+                            </div>
+
+                            <div class="data-table-container">
+                                <el-table 
+                                    :data="currentResult.result_data" 
+                                    stripe 
+                                    style="width: 100%"
+                                    v-loading="tableLoading"
+                                >
+                                    <el-table-column
+                                        v-for="(key, index) in filteredColumns"
+                                        :key="index"
+                                        :prop="key"
+                                        :label="key"
+                                        :min-width="120"
+                                    >
+                                        <template #default="scope">
+                                            <span v-if="scope.row[key] === null" style="color: #999">NULL</span>
+                                            <span v-else-if="typeof scope.row[key] === 'object'">[Object]</span>
+                                            <span v-else>{{ scope.row[key] }}</span>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                            
+                            <div class="result-count">
+                                显示 {{ filteredColumns.length }} 列中的 {{ filteredColumns.length }} 列
+                            </div>
+                        </div>
+                        
+                        <div v-else>
+                            <div class="json-view" v-html="formatJson(currentResult.result_data)"></div>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <p class="no-data">无数据</p>
+                    </div>
+                </div>
+            </el-dialog>
+        </main>
+        <footer class="app-footer">
+            <p>© 2025 数据库查询系统 - 版权所有</p>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted, computed, toRefs } = Vue;
+        const app = createApp({
+            setup() {
+                // 状态管理
+                const results = ref([]);
+                const queryInstances = ref([]);
+                const loading = ref(false);
+                const searchQuery = ref('');
+                const statusFilter = ref('');
+                const instanceFilter = ref('');
+                const pagination = reactive({
+                    current_page: 1,
+                    page_size: 10,
+                    total_pages: 1,
+                    total_count: 0,
+                    has_previous: false,
+                    has_next: false,
+                });
+                const showDetail = ref(false);
+                const currentResult = ref(null);
+                const loadingDetail = ref(false);
+                const detailViewMode = ref('table');
+                const selectedColumns = ref([]);
+                const allColumns = ref([]);
+                const tableLoading = ref(false);
+
+                // 防抖函数
+                function debounce(fn, delay = 500) {
+                    let timer = null;
+                    return function (...args) {
+                        if (timer) clearTimeout(timer);
+                        timer = setTimeout(() => {
+                            fn.apply(this, args);
+                        }, delay);
+                    };
+                }
+
+                // 搜索防抖
+                const debounceSearch = debounce(() => {
+                    fetchResults();
+                }, 500);
+
+                // 格式化日期
+                function formatDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                    });
+                }
+                function exportToCSV(data, filename) {
+                    if (!data || data.length === 0) {
+                        ElementPlus.ElMessage.warning('没有数据可导出');
+                        return;
+                    }
+
+                    // 获取所有列名
+                    const headers = Object.keys(data[0]);
+                    
+                    // 创建CSV内容
+                    let csvContent = headers.join(',') + '\n';
+                    
+                    data.forEach(row => {
+                        const rowData = headers.map(header => {
+                            let cell = row[header];
+                            // 处理null和undefined
+                            if (cell === null || cell === undefined) {
+                                return '';
+                            }
+                            // 处理包含逗号或换行符的字符串
+                            if (typeof cell === 'string') {
+                                return `"${cell.replace(/"/g, '""')}"`;
+                            }
+                            return cell;
+                        });
+                        csvContent += rowData.join(',') + '\n';
+                    });
+
+                    // 创建Blob对象
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename || 'export.csv');
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+
+                // 导出当前结果数据
+                function exportCurrentData() {
+                    if (!currentResult.value || !currentResult.value.result_data) {
+                        ElementPlus.ElMessage.warning('没有数据可导出');
+                        return;
+                    }
+                    const filename = `result_${currentResult.value.query_instance_name}_${new Date().getTime()}.csv`;
+                    exportToCSV(currentResult.value.result_data, filename);
+                }
+
+                // 导出单条结果
+                function exportResult(row) {
+                    if (!row.result_data) {
+                        ElementPlus.ElMessage.warning('没有数据可导出');
+                        return;
+                    }
+                    const filename = `result_${row.query_instance_name}_${row.id}.csv`;
+                    exportToCSV(row.result_data, filename);
+                }
+        function ensureArrayData(data) {
+            if (Array.isArray(data)) {
+                return data;
+            }
+            
+            // 如果是字符串，尝试解析为JSON
+            if (typeof data === 'string') {
+                try {
+                    const parsed = JSON.parse(data);
+                    return Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                    console.error('解析JSON失败:', e);
+                    return [];
+                }
+            }
+            
+            // 如果是对象，转换为数组
+            if (typeof data === 'object' && data !== null) {
+                return [data];
+            }
+            
+            // 其他情况返回空数组
+            return [];
+        }
+
+                // 复制表格数据到剪贴板
+                function copyTableData(row) {
+                    if (!row.result_data) {
+                        ElementPlus.ElMessage.warning('没有数据可复制');
+                        return;
+                    }
+                    copyDataToClipboard(row.result_data);
+                }
+
+                // 复制当前数据到剪贴板
+                function copyCurrentData() {
+                    if (!currentResult.value || !currentResult.value.result_data) {
+                        ElementPlus.ElMessage.warning('没有数据可复制');
+                        return;
+                    }
+                    copyDataToClipboard(currentResult.value.result_data);
+                }
+
+                                // 将数据复制到剪贴板（兼容性处理）
+                        // 将数据复制到剪贴板（兼容性处理）
+        function copyDataToClipboard(data) {
+            // 确保数据是数组格式
+            const arrayData = ensureArrayData(data);
+            
+            if (arrayData.length === 0) {
+                ElementPlus.ElMessage.warning('没有数据可复制');
+                return;
+            }
+
+            // 获取所有列名（从第一条数据中获取）
+            const headers = Object.keys(arrayData[0] || {});
+            
+            if (headers.length === 0) {
+                ElementPlus.ElMessage.warning('数据格式不正确');
+                return;
+            }
+
+            // 创建制表符分隔的内容
+            let tabContent = headers.join('\t') + '\n';
+            
+            arrayData.forEach(row => {
+                const rowData = headers.map(header => {
+                    let cell = row[header];
+                    // 处理null和undefined
+                    if (cell === null || cell === undefined) {
+                        return '';
+                    }
+                    // 转换为字符串并移除换行符
+                    return String(cell).replace(/[\n\r]/g, ' ');
+                });
+                tabContent += rowData.join('\t') + '\n';
+            });
+
+            // 兼容性处理：优先使用Clipboard API，不支持则回退到execCommand
+            const copyToClipboard = (text) => {
+                return new Promise((resolve, reject) => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(resolve).catch(reject);
+                    } else {
+                        // 回退方案
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        textarea.style.position = 'fixed';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        
+                        try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                                resolve();
+                            } else {
+                                reject(new Error('复制失败'));
+                            }
+                        } catch (err) {
+                            reject(err);
+                        } finally {
+                            document.body.removeChild(textarea);
+                        }
+                    }
+                });
+            };
+
+            copyToClipboard(tabContent).then(() => {
+                ElementPlus.ElMessage.success('数据已复制到剪贴板');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 如果复制失败，提供手动复制选项
+                ElementPlus.ElMessageBox.confirm(
+                    '自动复制失败，请手动选择并复制以下内容',
+                    '复制失败',
+                    {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                        showCancelButton: false
+                    }
+                ).then(() => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = tabContent;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    ElementPlus.ElMessage.success('已选中数据，请按Ctrl+C复制');
+                });
+            });
+        }
+
+                // 获取查询实例列表
+                async function fetchQueryInstances() {
+                    try {
+                        const response = await axios.get('/api/query-instances/');
+                        // 确保queryInstances始终是数组且不包含null元素
+                        /**
+                         * 确保queryInstances始终是数组且不包含null元素
+                         * @type {Array}
+                         */
+                        // 从响应数据中提取results数组,不显示id，而是显示name
+                        queryInstances.value = Array.isArray(response.data.results) ? response.data.results.map(instance => ({
+                            id: instance.id,
+                            name: instance.name
+                        })).filter(instance => instance !== null && instance !== undefined) : [];
+                        // console.log(queryInstances.value);
+                    } catch (error) {
+                        console.error('获取查询实例失败:', error);
+                    }
+                }
+
+                // 获取执行结果
+                async function fetchResults() {
+                    loading.value = true;
+                    try {
+                        const params = {
+                            page: pagination.current_page,
+                            page_size: pagination.page_size,
+                            search: searchQuery.value,
+                        };
+
+                        if (statusFilter.value) {
+                            params.status = statusFilter.value;
+                        }
+
+                        if (instanceFilter.value) {
+                            params.query_instance = queryInstances.value.filter(instance => instance.name === instanceFilter.value)[0].id; // queryInstances.value.filter(instance => instance.name === instanceFilter.value);
+                        }
+
+                        const response = await axios.get('/api/execution-results/', { params });
+                        // 确保results始终是数组
+                        results.value = Array.isArray(response.data.results) ? response.data.results : [];
+
+                        // 更新分页信息
+                        pagination.total_count = response.data.count;
+                        pagination.total_pages = Math.ceil(response.data.count / 10);
+                        pagination.has_previous = response.data.previous !== null;
+                        pagination.has_next = response.data.next !== null;
+                        ElementPlus.ElMessage.success('数据获取成功');
+                    } catch (error) {
+                        ElementPlus.ElMessage.error('数据获取失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                // 分页处理
+                function handleSizeChange(size) {
+                    pagination.page_size = size;
+                    fetchResults();
+                }
+
+                function handleCurrentChange(page) {
+                    pagination.current_page = page;
+                    fetchResults();
+                }
+                // 刷新数据
+                function refreshData() {
+                    fetchQueryInstances();
+                    fetchResults();
+                }
+
+                        // 修改viewResult函数确保数据格式正确
+        async function viewResult(id) {
+            loadingDetail.value = true;
+            showDetail.value = true;
+            detailViewMode.value = 'table';
+            try {
+                const response = await axios.get(`/api/execution-results/${id}/`);
+                currentResult.value = response.data || {};
+                
+                // 确保result_data是数组格式
+                currentResult.value.result_data = ensureArrayData(currentResult.value.result_data);
+                
+                // 提取所有列名
+                if (currentResult.value.result_data.length > 0) {
+                    const allKeys = new Set();
+                    currentResult.value.result_data.forEach(item => {
+                        Object.keys(item).forEach(key => {
+                            allKeys.add(key);
+                        });
+                    });
+                    allColumns.value = Array.from(allKeys);
+                    selectedColumns.value = Array.from(allKeys);
+                }
+            } catch (error) {
+                console.error('获取结果详情失败:', error);
+            } finally {
+                loadingDetail.value = false;
+            }
+        }
+
+                // 计算过滤后的列
+                const filteredColumns = computed(() => {
+                    if (!selectedColumns.value || selectedColumns.value.length === 0) {
+                        return allColumns.value;
+                    }
+                    return selectedColumns.value;
+                });
+
+                // 导出结果
+                async function exportResult(id) {
+                    try {
+                        const response = await axios.get(`/api/execution-results/${id}/export/`, {
+                            responseType: 'blob'
+                        });
+                        const blob = new Blob([response.data], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `result_${id}_${new Date().getTime()}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.error('导出结果失败:', error);
+                    }
+                }
+                
+                // 格式化JSON为带高亮的HTML
+                function formatJson(data) {
+                    if (!data) return '';
+                    
+                    const jsonStr = JSON.stringify(data, null, 2);
+                    
+                    // 高亮语法
+                    return jsonStr
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+                            let cls = '';
+                            if (/^"/.test(match)) {
+                                if (/:$/.test(match)) {
+                                    cls = 'json-key';
+                                } else {
+                                    cls = 'json-string';
+                                }
+                            } else if (/true|false/.test(match)) {
+                                cls = 'json-boolean';
+                            } else if (/null/.test(match)) {
+                                cls = 'json-null';
+                            } else {
+                                cls = 'json-number';
+                            }
+                            return `<span class="${cls}">${match}</span>`;
+                        });
+                }
+
+                // 组件挂载时执行
+                onMounted(() => {
+                    fetchQueryInstances();
+                    fetchResults();
+                });
+
+                return {
+                    searchQuery,
+                    statusFilter,
+                    instanceFilter,
+                    results,
+                    pagination,
+                    loading,
+                    showDetail,
+                    currentResult,
+                    loadingDetail,
+                    queryInstances,
+                    detailViewMode,
+                    selectedColumns,
+                    allColumns,
+                    filteredColumns,
+                    tableLoading,
+                    debounceSearch,
+                    formatDate,
+                    fetchResults,
+                    handleSizeChange,
+                    handleCurrentChange,
+                    viewResult,
+                    exportResult,
+                    refreshData,
+                    formatJson,
+                    exportCurrentData,
+                    copyTableData,
+                    copyCurrentData
+
+                };
+            }
+        });
+
+        // 使用Element Plus
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
+/**
+from django.conf import settings
+import os
+def serve_vue(request):
+    with open(os.path.join(settings.STATICFILES_DIRS[0], 'index.html'), 'rb') as f:
+        content = f.read().decode('utf-8')
+        return HttpResponse(content, content_type='text/html')
+
+urlpatterns = [
+    path('', serve_vue),
+*/
