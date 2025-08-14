@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action, authentication_classes, permission_classes
 from rest_framework.response import Response
@@ -98,9 +100,6 @@ class ExecutionResultViewSet(viewsets.ReadOnlyModelViewSet):
             try:
                 # 参考前端逻辑，先尝试解析JSON字符串
                 parsed_data = json.loads(data)
-                # 确保解析后的数据是数组
-                if not Array.isArray(parsed_data):
-                    parsed_data = [parsed_data]
                 data = parsed_data
             except Exception as e:
                 print(f"JSON解析失败: {str(e)}")

@@ -1,4 +1,9 @@
+import subprocess
+import tempfile
+import os
 from celery import shared_task
+from django.utils import timezone
+
 from .models import QueryInstance, ExecutionResult
 import time
 import json
@@ -166,7 +171,47 @@ def execute_query(self, query_instance_id):
 
 
 @shared_task
-def test_task():
-    """测试任务"""
-    logger.info("测试任务执行成功")
-    return "测试任务执行成功"
+def execute_script_task(script_id):
+    from .models import Script
+    script = Script.objects.get(id=script_id)
+    if script.status != 'running':
+        return
+
+    result = execute_python_code(script.code)
+
+    script.output = result['output']
+    script.error = result['error']
+    script.status = 'success' if result['returncode'] == 0 else 'failed'
+    script.finished_at = timezone.now()
+    script.save()
+
+@shared_task
+def execute_python_code(code, timeout=30):
+    """在隔离环境中执行Python代码"""
+    with tempfile.NamedTemporaryFile(suffix='.py', delete=False) as tmp:
+        tmp.write(code.encode('utf-8'))
+        tmp_path = tmp.name
+
+    try:
+        result = subprocess.run(
+            ['python', tmp_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout
+        )
+        return {
+            'output': result.stdout,
+            'error': result.stderr,
+            'returncode': result.returncode,
+            'success': False if result.stderr else True
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            'output': '',
+            'error': f'执行超时（{timeout}秒）',
+            'returncode': -1,
+            'success': False
+        }
+    finally:
+        os.unlink(tmp_path)  # 清理临时文件

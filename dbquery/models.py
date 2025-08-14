@@ -1,6 +1,13 @@
+import sys
+import traceback
+from io import StringIO
+
+# User
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django_celery_beat.models import PeriodicTask
-import json
+
 
 class DatabaseConnection(models.Model):
     DB_TYPES = (
@@ -141,3 +148,50 @@ class ExecutionResult(models.Model):
 #     class Meta:
 #         verbose_name_plural = "通知管理"
 #         verbose_name = "通知配置"
+class Script(models.Model):
+    STATUS_CHOICES = (
+        ('draft', '草稿'),
+        ('pending', '待审批'),
+        ('submitted', '待审批'),
+        ('approved', '已批准'),
+        ('rejected', '已拒绝')
+    )
+
+    title = models.CharField(max_length=100,verbose_name="脚本名称")
+    description = models.TextField(blank=True, null=True, verbose_name='描述信息')
+    code = models.TextField(verbose_name='脚本内容')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(User, null=True, blank=True, related_name='reviewed_scripts',on_delete=models.SET_NULL)
+    review_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.title}"
+
+    class Meta:
+        verbose_name_plural = "脚本管理"
+        verbose_name = "脚本管理"
+
+        permissions = [
+            ("review_script", "可以审批脚本"),
+            ("execute_script", "可以执行脚本"),
+            ("change_any_script", "可以修改任何状态的脚本"),
+            ("create_scheduled_task", "可以创建定时任务"),
+        ]
+
+
+class ExecutionLog(models.Model):
+    script = models.ForeignKey(Script, on_delete=models.CASCADE)
+    executed_at = models.DateTimeField(auto_now_add=True)
+    output = models.TextField()
+    success = models.BooleanField()
+    error = models.TextField(blank=True)   # 错误输出
+    triggered_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    def __str__(self):
+        return f"{self.script}"
+
+    class Meta:
+        verbose_name_plural = "脚本执行日志"
+        verbose_name = "脚本执行日志"

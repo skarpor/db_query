@@ -148,7 +148,7 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] # 添加这一行
 # 默认主键类型
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Redis 配置
-IP_WHITELIST_ENABLED = True
+IP_WHITELIST_ENABLED = False
 
 REDIS_HOST = os.getenv('REDIS_HOST', '192.168.200.1')
 REDIS_PORT = os.getenv('REDIS_PORT', 6379)

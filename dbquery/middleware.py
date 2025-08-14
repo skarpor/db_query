@@ -1,7 +1,11 @@
 # middleware.py
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseForbidden
 import redis
 from django.conf import settings
+
+from .models import Script
+
 
 class IPRestrictionMiddleware:
     def __init__(self, get_response):
@@ -49,3 +53,18 @@ class IPControlMiddleware:
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         return x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+
+
+class ScriptAccessMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        return response
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        if 'pk' in view_kwargs and request.resolver_match.url_name == 'script-draft-edit':
+            draft = Script.objects.get(pk=view_kwargs['pk'])
+            if draft.status == 'submitted' and not request.user.has_perm('app.change_submitted_script'):
+                raise PermissionDenied("无修改已提交脚本的权限")
