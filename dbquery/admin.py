@@ -274,7 +274,8 @@ class ScriptAdmin(admin.ModelAdmin):
                 "您没有审批脚本的权限",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 状态检查
         if script.status != 'submitted':
@@ -283,7 +284,8 @@ class ScriptAdmin(admin.ModelAdmin):
                 "只有待审批状态的脚本可以通过审批",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 更新状态
         script.status = 'approved'
@@ -296,7 +298,8 @@ class ScriptAdmin(admin.ModelAdmin):
             "脚本已通过审批，现在可以执行",
             messages.SUCCESS
         )
-        return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
     # 处理拒绝审批视图
     def reject_view(self, request, object_id):
@@ -309,7 +312,8 @@ class ScriptAdmin(admin.ModelAdmin):
                 "您没有审批脚本的权限",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 状态检查
         if script.status != 'submitted':
@@ -318,7 +322,8 @@ class ScriptAdmin(admin.ModelAdmin):
                 "只有待审批状态的脚本可以拒绝",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 更新状态
         script.status = 'rejected'
@@ -330,7 +335,8 @@ class ScriptAdmin(admin.ModelAdmin):
             "脚本已被拒绝",
             messages.WARNING
         )
-        return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
     # 处理提交审批视图
     def submit_view(self, request, object_id):
@@ -342,7 +348,9 @@ class ScriptAdmin(admin.ModelAdmin):
                 "只有草稿状态的脚本可以提交",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
+
 
         script.status = 'submitted'
         script.save()
@@ -352,7 +360,8 @@ class ScriptAdmin(admin.ModelAdmin):
             "脚本已提交等待审批",
             messages.SUCCESS
         )
-        return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
     # 处理测试执行视图
     def test_execute_view(self, request, object_id):
@@ -366,11 +375,11 @@ class ScriptAdmin(admin.ModelAdmin):
                 "只有已批准的脚本可以执行",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 执行脚本
         result = execute_python_code(script.code)
-        print(result)
         # 保存执行日志
         ExecutionLog.objects.create(
             script=script,
@@ -389,7 +398,9 @@ class ScriptAdmin(admin.ModelAdmin):
             level = messages.ERROR
 
         self.message_user(request, msg, level)
-        return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+        return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
+
 
     # 处理创建定时任务视图
     def create_task_view(self, request, object_id):
@@ -401,7 +412,8 @@ class ScriptAdmin(admin.ModelAdmin):
                 "只有已批准的脚本可以创建定时任务",
                 messages.ERROR
             )
-            return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            # return HttpResponseRedirect(reverse('admin:dbquery_script_change', args=[object_id]))
+            return HttpResponseRedirect(reverse('admin:dbquery_script_changelist'))
 
         # 重定向到Celery Beat的创建页面
         create_url = reverse('admin:django_celery_beat_periodictask_add')

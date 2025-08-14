@@ -4,8 +4,8 @@ from .views import (
     DatabaseConnectionViewSet,
     SQLParameterViewSet,
     QueryInstanceViewSet,
-    ExecutionResultViewSet
-)
+    ExecutionResultViewSet,
+    ExecutionLogList)
 
 router = DefaultRouter()
 router.register(r'database-connections', DatabaseConnectionViewSet)
@@ -16,4 +16,6 @@ router.register(r'execution-results', ExecutionResultViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('execution-results/<int:pk>/export/', ExecutionResultViewSet.as_view({'get': 'export'}), name='export_result'),
+    path('execution-logs/', ExecutionLogList.as_view(), name='execution-log-list'),
+
 ]

@@ -1,18 +1,18 @@
 import json
 
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, generics
 from rest_framework.decorators import action, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import DatabaseConnection, SQLParameter, QueryInstance, ExecutionResult
+from .models import DatabaseConnection, SQLParameter, QueryInstance, ExecutionResult, ExecutionLog
 from .serializers import (
     DatabaseConnectionSerializer,
     SQLParameterSerializer,
     QueryInstanceSerializer,
     ExecutionResultSerializer,
-    PaginatedExecutionResultSerializer
-)
+    PaginatedExecutionResultSerializer,
+    ExecutionLogSerializer)
 import csv
 from django.http import HttpResponse
 from django.utils import timezone
@@ -147,3 +147,25 @@ class ExecutionResultViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = self.get_serializer(latest_results, many=True)
         return Response(serializer.data)
+
+
+class ExecutionLogList(generics.ListAPIView):
+    serializer_class = ExecutionLogSerializer
+
+    def get_queryset(self):
+        queryset = ExecutionLog.objects.all().order_by('-executed_at')
+
+        # 过滤条件
+        status = self.request.query_params.get('status', None)
+        search = self.request.query_params.get('search', None)
+
+        if status:
+            if status == 'success':
+                queryset = queryset.filter(success=True)
+            elif status == 'failed':
+                queryset = queryset.filter(success=False)
+
+        if search:
+            queryset = queryset.filter(script__title__icontains=search)
+
+        return queryset

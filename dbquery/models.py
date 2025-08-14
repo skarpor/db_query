@@ -185,9 +185,9 @@ class Script(models.Model):
 class ExecutionLog(models.Model):
     script = models.ForeignKey(Script, on_delete=models.CASCADE)
     executed_at = models.DateTimeField(auto_now_add=True)
-    output = models.TextField()
+    output = models.TextField(null=True, blank=True,)
     success = models.BooleanField()
-    error = models.TextField(blank=True)   # 错误输出
+    error = models.TextField(blank=True,null=True)   # 错误输出
     triggered_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     def __str__(self):
         return f"{self.script}"

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import DatabaseConnection, SQLParameter, QueryInstance, ExecutionResult
+from .models import DatabaseConnection, SQLParameter, QueryInstance, ExecutionResult, ExecutionLog
+
 
 class DatabaseConnectionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,3 +50,15 @@ class PaginatedExecutionResultSerializer(serializers.Serializer):
     next = serializers.URLField(allow_null=True)
     previous = serializers.URLField(allow_null=True)
     results = ExecutionResultSerializer(many=True)
+
+class ExecutionLogSerializer(serializers.ModelSerializer):
+    script_title = serializers.CharField(source='script.title', read_only=True)
+    triggered_by_name = serializers.CharField(source='triggered_by.username', read_only=True)
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ExecutionLog
+        fields = '__all__'
+
+    def get_status(self, obj):
+        return 'success' if obj.success else 'failed'
