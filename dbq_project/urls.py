@@ -14,13 +14,14 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
-from django.views.generic import TemplateView
-from django.http import HttpResponse
-from django.views.static import serve
-from django.conf import settings
 import os
+
+from django.conf import settings
+from django.contrib import admin
+from django.http import HttpResponse
+from django.urls import path, include
+
+
 def serve_vue(request):
     with open(os.path.join(settings.STATICFILES_DIRS[0], 'index.html'), 'rb') as f:
         content = f.read().decode('utf-8')
@@ -30,4 +31,5 @@ urlpatterns = [
     path('', serve_vue),
     path('admin/', admin.site.urls),
     path('api/', include('dbquery.urls')),
+    path('api/', include('document.urls')),
 ]

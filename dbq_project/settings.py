@@ -34,6 +34,20 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 # ALLOWED_HOSTS = ['*']
 
 
+# 添加文档存储目录
+DOCUMENTS_DIR = os.path.join(BASE_DIR, 'documents')
+
+# 确保目录存在
+if not os.path.exists(DOCUMENTS_DIR):
+    os.makedirs(DOCUMENTS_DIR)
+CSRF_COOKIE_SECURE = False  # 开发环境下可以设为False
+CSRF_COOKIE_HTTPONLY = False  # 允许前端JavaScript访问CSRF token
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    # 添加你的前端地址
+]
 
 # Application definition
 
@@ -49,6 +63,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_celery_beat',
         'import_export',
+    'document',
 
 ]
 MIDDLEWARE = [

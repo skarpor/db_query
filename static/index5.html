@@ -1,0 +1,2233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库查询与脚本系统</title>
+    <link rel="stylesheet" href="/static/css/font-awe.all.min.css">
+    <!-- 引入Vue.js -->
+    <script src="/static/js/vue.global.prod.js"></script>
+    <!-- 引入Element Plus -->
+    <link rel="stylesheet" href="/static/css/index.css">
+    <script src="/static/js/index.full.js"></script>
+    <script src="/static/js/index.iife.min.js"></script>
+
+    <!-- 引入Axios -->
+    <script src="/static/js/axios.min.js"></script>
+    <script src="/static/js/marked.js"></script>
+    <link rel="stylesheet" href="/static/css/github.min.css">
+    <script src="/static/js/highlight.min.js"></script>
+    <script src="/static/js/purify.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #1890ff, #096dd9);
+            color: white;
+            padding: 0 24px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+
+        .app-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .app-header h1 i {
+            margin-right: 12px;
+            font-size: 24px;
+        }
+
+        .app-main {
+            flex: 1;
+            padding: 20px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .app-footer {
+            text-align: center;
+            padding: 16px;
+            color: #666;
+            font-size: 14px;
+            background: #fff;
+            border-top: 1px solid #eee;
+        }
+
+        .query-results-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .filter-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 250px;
+        }
+
+        .filter-dropdowns select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .results-table-container {
+            margin-bottom: 20px;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #eee;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .results-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.success {
+            background-color: #f0f9eb;
+            color: #67c23a;
+        }
+
+        .status-badge.failed {
+            background-color: #fef0f0;
+            color: #f56c6c;
+        }
+
+        .action-buttons button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .action-buttons button:hover {
+            background-color: #40a9ff;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .pagination-container button {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination-container button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .pagination-container span {
+            margin: 0 10px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .result-info p {
+            margin: 8px 0;
+        }
+
+        .error-message {
+            margin-top: 16px;
+            padding: 12px;
+            background-color: #fef0f0;
+            border-radius: 4px;
+        }
+
+        .error-message h3 {
+            margin-top: 0;
+            color: #f56c6c;
+            font-size: 16px;
+        }
+
+        .error-message pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #f56c6c;
+        }
+
+        .data-table-container {
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #f7f7f7;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .no-results,
+        .no-data {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+
+        .failed-row {
+            background-color: #fef0f0;
+        }
+
+        .el-table__header,
+        .el-table__body {
+            width: 100% !important;
+        }
+
+        /* 新增样式 */
+        .view-switcher {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .json-view {
+            background-color: #f8f8f8;
+            border: 1px solid #eaeaea;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow: auto;
+        }
+
+        .json-key {
+            color: #881391;
+        }
+
+        .json-string {
+            color: #c41a16;
+        }
+
+        .json-number {
+            color: #1c00cf;
+        }
+
+        .json-boolean {
+            color: #0d22aa;
+        }
+
+        .json-null {
+            color: #666;
+        }
+
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .data-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .column-filter {
+            margin-bottom: 10px;
+        }
+
+        .result-count {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 新增按钮样式 */
+        .copy-btn {
+            margin-left: 10px;
+            background-color: #67c23a !important;
+        }
+
+        .copy-btn:hover {
+            background-color: #85ce61 !important;
+        }
+
+        /* 标签页样式优化 */
+        .app-tabs {
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .app-tabs .el-tabs__header {
+            margin: 0;
+        }
+
+        .app-tabs .el-tabs__nav-wrap::after {
+            height: 1px;
+            background-color: #e4e7ed;
+        }
+
+        .app-tabs .el-tabs__item {
+            padding: 0 24px;
+            height: 48px;
+            line-height: 48px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #606266;
+        }
+
+        .app-tabs .el-tabs__item.is-active {
+            color: #1890ff;
+            font-weight: 600;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+
+        .page-title h1 {
+            font-size: 24px;
+            color: #1f2d3d;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .page-title h1 i {
+            margin-right: 12px;
+            color: #1890ff;
+            font-size: 28px;
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* 脚本日志表格样式 */
+        .script-status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .script-status-badge.success {
+            background-color: #f0f9eb;
+            color: #67c23a;
+        }
+
+        .script-status-badge.failed {
+            background-color: #fef0f0;
+            color: #f56c6c;
+        }
+
+        .script-status-badge.pending {
+            background-color: #f4f4f5;
+            color: #909399;
+        }
+
+        /* 日志详情弹窗样式 */
+        .log-output {
+            background-color: #f8f8f8;
+            border: 1px solid #eaeaea;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow: auto;
+            margin-top: 15px;
+        }
+
+        .log-error {
+            color: #f56c6c;
+        }
+
+        .log-success {
+            color: #67c23a;
+        }
+
+        /* 新增文档类型图标 */
+        .fa-file-alt:before {
+            content: "📄";
+            font-style: normal;
+            margin-right: 8px;
+        }
+
+        .fa-book:before {
+            content: "📚";
+            font-style: normal;
+            margin-right: 8px;
+        }
+
+        .fa-cog:before {
+            content: "⚙️";
+            font-style: normal;
+            margin-right: 8px;
+        }
+
+        /* 文档容器布局优化 */
+        .document-container {
+            display: flex;
+            height: calc(100vh - 320px);
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 左侧文档列表 */
+        .document-sidebar {
+            width: 280px;
+            border-right: 1px solid #eaeaea;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            width: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            background: #fff;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-header .toggle-btn {
+            background: #f0f2f5;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .sidebar-header .toggle-btn:hover {
+            background: #e6f4ff;
+        }
+
+        .sidebar-header .search-box {
+            flex: 1;
+        }
+
+        .document-category {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            padding: 12px 16px;
+            background: #f0f2f5;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+        }
+
+        .document-category i {
+            margin-right: 8px;
+        }
+
+        .document-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .document-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .document-item:hover {
+            background-color: #edf7ff;
+        }
+
+        .document-item.active {
+            background-color: #e6f4ff;
+            border-left: 4px solid #1890ff;
+        }
+
+        .document-item .document-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+
+        .document-item .document-title i {
+            margin-right: 8px;
+            color: #1890ff;
+            font-size: 16px;
+        }
+
+        .document-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .document-meta .version {
+            background: #e6f7ff;
+            color: #1890ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* 文档内容区域 */
+        .document-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .content-container {
+            flex: 1;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .document-main-title {
+            margin: 0;
+            font-size: 28px;
+            color: #1f2d3d;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .editor-container {
+            margin-top: 20px;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+/* 修正锚点跳转位置（避免被固定标题栏遮挡） */
+.markdown-body h1::before,
+.markdown-body h2::before,
+.markdown-body h3::before {
+    content: '';
+    display: block;
+    height: 70px;      /* 等于固定标题栏高度 */
+    margin-top: -70px; /* 负值向上偏移 */
+    visibility: hidden;
+}
+
+        .markdown-body {
+            line-height: 1.8;
+            color: #333;
+            max-width: 100%;
+            overflow-wrap: break-word;
+        }
+
+        .markdown-body h1 {
+            font-size: 28px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 12px;
+            margin-top: 40px;
+            margin-bottom: 24px;
+        }
+
+        .markdown-body h2 {
+            font-size: 24px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            margin-top: 36px;
+            margin-bottom: 20px;
+        }
+
+        .markdown-body h3 {
+            font-size: 20px;
+            margin-top: 32px;
+            margin-bottom: 16px;
+        }
+
+        .markdown-body pre {
+            background: #f8f8f8;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+
+        .markdown-body code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .markdown-body th {
+            background-color: #f8f8f8;
+            font-weight: 600;
+        }
+
+        .markdown-body th,
+        .markdown-body td {
+            border: 1px solid #eaeaea;
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        .markdown-body tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+/* 添加固定标题栏和版本栏的样式 */
+.content-header-fixed {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+    padding: 0 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.content-header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0;
+    border-bottom: 1px solid #eee;
+}
+
+.scrollable-content {
+    padding: 20px 32px;
+    overflow-y: auto;
+    height: calc(100vh - 500px); /* 根据实际布局调整高度 */
+}
+
+.document-footer-fixed {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: white;
+    padding: 0 32px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.document-footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 0;
+    border-top: 1px solid #eee;
+}
+        /* 右侧目录样式 */
+        .document-toc-sidebar {
+            width: 260px;
+            background-color: #fafafa;
+            border-left: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .toc-hidden {
+            transform: translateX(100%);
+            opacity: 0;
+            width: 0;
+            border: none;
+        }
+
+        .toc-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .toc-container {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .toc-container h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .toc-container ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .toc-container li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .toc-container a {
+            color: #555;
+            text-decoration: none;
+            display: block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .toc-container a:hover {
+            color: #1890ff;
+            background: #f0f7ff;
+        }
+
+        .toc-container .toc-h1 {
+            font-weight: 600;
+            font-size: 15px;
+            margin-top: 15px;
+        }
+
+        .toc-container .toc-h2 {
+            font-size: 14px;
+            padding-left: 12px;
+            margin-top: 10px;
+        }
+
+        .toc-container .toc-h3 {
+            font-size: 13px;
+            padding-left: 24px;
+            color: #666;
+        }
+
+        .no-document {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .no-document i {
+            font-size: 60px;
+            color: #e8e8e8;
+            margin-bottom: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .document-sidebar,
+            .document-toc-sidebar {
+                position: absolute;
+                height: calc(100vh - 200px);
+                top: 0;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .document-sidebar {
+                left: 0;
+            }
+
+            .document-toc-sidebar {
+                right: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .doc-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .content-container {
+                padding: 16px;
+            }
+
+            .content-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="app-container">
+    <header class="app-header">
+        <h1>数据库查询与脚本系统</h1>
+    </header>
+    <main class="app-main">
+        <div class="query-results-container">
+            <!-- 标签页导航 -->
+            <div class="app-tabs">
+                <el-tabs v-model="activeTab" type="card">
+                    <el-tab-pane label="文档" name="document"></el-tab-pane>
+                    <el-tab-pane label="查询结果" name="query"></el-tab-pane>
+                    <el-tab-pane label="脚本日志" name="script"></el-tab-pane>
+                </el-tabs>
+            </div>
+
+            <div class="page-title">
+                <h1>
+                    <i :class="activeTab === 'query' ? 'fas fa-table' : activeTab === 'script' ? 'fas fa-file-alt' : 'fas fa-book'"></i>
+                    {{ activeTab === 'query' ? '查询结果' : activeTab === 'script' ? '脚本执行日志' : '系统文档' }}
+                </h1>
+                <div class="doc-actions" v-if="activeTab === 'document'">
+                    <el-button @click="toggleLeftSidebar" :type="showLeftSidebar ? 'primary' : ''">
+                        <i class="fas fa-folder"></i> {{ showLeftSidebar ? '隐藏文件目录' : '显示文件目录' }}
+                    </el-button>
+                    <el-button @click="toggleRightSidebar" :type="showRightSidebar ? 'primary' : ''">
+                        <i class="fas fa-list"></i> {{ showRightSidebar ? '隐藏文档目录' : '显示文档目录' }}
+                    </el-button>
+                    <el-button type="success" @click="refreshDocument">
+                        <i class="fas fa-sync-alt"></i> 刷新文档
+                    </el-button>
+                </div>
+            </div>
+            <!-- 查询结果标签页内容 -->
+            <div v-if="activeTab === 'query'">
+
+                <div class="filter-container">
+
+                    <el-input
+                            v-model="searchQuery"
+                            placeholder="搜索查询实例..."
+                            @input="debounceSearch"
+                            style="width: 250px;"
+                    ></el-input>
+                    <div class="search-box"></div>
+
+                    <div class="filter-dropdowns">
+                        <el-icon>
+                            <Female/>
+                        </el-icon>
+                        <el-button type="primary" @click="refreshData"><i class="fas fa-sync-alt"></i>刷新</el-button>
+                        <el-select v-model="statusFilter" @change="fetchResults" placeholder="所有状态"
+                                   style="margin-left: 10px; width: 120px;">
+                            <el-option value="">所有状态</el-option>
+                            <el-option value="success">成功</el-option>
+                            <el-option value="failed">失败</el-option>
+                        </el-select>
+
+                        <el-select v-model="instanceFilter" @change="fetchResults" placeholder="所有查询实例"
+                                   style="margin-left: 10px; width: 180px;">
+                            <el-option value="">所有查询实例</el-option>
+                            <el-option v-for="instance in queryInstances" :key="instance.id" :value="instance.name">
+                                {{ instance.name }}
+                            </el-option>
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="results-table-container" style="width: 100%;">
+                    <el-table :data="results" stripe style="width: 100%">
+                        <el-table-column prop="query_instance_name" label="查询实例" width="200"></el-table-column>
+                        <el-table-column prop="status" label="状态" width="100">
+                            <template #default="scope">
+                                <span :class="['status-badge', scope.row.status]">
+                                    {{ scope.row.status === 'success' ? '成功' : '失败' }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="created_at" label="执行时间" width="180">
+                            <template #default="scope">
+                                {{ formatDate(scope.row.created_at) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="execution_time" label="耗时(秒)" width="100">
+                            <template #default="scope">
+                                {{ scope.row.execution_time.toFixed(2) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="220">
+                            <template #default="scope">
+                                <el-button type="primary" size="small" @click="viewResult(scope.row.id)">查看</el-button>
+                                <el-button v-if="scope.row.status === 'success'" type="success" size="small"
+                                           @click="exportResult(scope.row)">导出CSV
+                                </el-button>
+                                <el-button v-if="scope.row.status === 'success'" type="success" size="small"
+                                           class="copy-btn" @click="copyTableData(scope.row)">复制数据
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+
+                    <div v-if="results.length === 0 && !loading" class="no-results">暂无结果</div>
+                    <div v-if="loading" class="loading">加载中...</div>
+                </div>
+                <div class="pagination-container">
+                    <el-pagination
+                            v-model:current-page="pagination.current_page"
+                            v-model:page-size="pagination.page_size"
+                            :page-sizes="[10, 20, 50]"
+                            layout="total, sizes, prev, pager, next, jumper"
+                            :total="pagination.total_count"
+                            @size-change="handleSizeChange"
+                            @current-change="handleCurrentChange"
+                    />
+                </div>
+
+            </div>
+            <!-- 脚本日志标签页内容 -->
+            <div v-if="activeTab === 'script'">
+                <div class="filter-container">
+                    <el-input
+                            v-model="scriptSearchQuery"
+                            placeholder="搜索脚本名称..."
+                            @input="debounceScriptSearch"
+                            style="width: 250px;"
+                    ></el-input>
+
+                    <div class="filter-dropdowns">
+                        <el-button type="primary" @click="refreshScriptLogs"><i class="fas fa-sync-alt"></i>刷新
+                        </el-button>
+                        <el-select v-model="scriptStatusFilter" @change="fetchScriptLogs" placeholder="所有状态"
+                                   style="margin-left: 10px; width: 120px;">
+                            <el-option value="">所有状态</el-option>
+                            <el-option value="success">成功</el-option>
+                            <el-option value="failed">失败</el-option>
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="results-table-container" style="width: 100%;">
+                    <el-table :data="scriptLogs" stripe style="width: 100%">
+                        <el-table-column prop="script_title" label="脚本名称" width="250"></el-table-column>
+                        <el-table-column prop="status" label="状态" width="100">
+                            <template #default="scope">
+                                    <span :class="['script-status-badge', scope.row.status]">
+                                        {{ scope.row.status === 'success' ? '成功' : scope.row.status === 'failed' ? '失败' : '执行中' }}
+                                    </span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="executed_at" label="执行时间" width="180">
+                            <template #default="scope">
+                                {{ formatDate(scope.row.executed_at) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="triggered_by_name" label="执行人" width="120"></el-table-column>
+                        <el-table-column label="操作" width="150">
+                            <template #default="scope">
+                                <el-button type="primary" size="small" @click="viewScriptLog(scope.row)">详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+
+                    <div v-if="scriptLogs.length === 0 && !scriptLoading" class="no-results">暂无日志</div>
+                    <div v-if="scriptLoading" class="loading">加载中...</div>
+                </div>
+
+                <div class="pagination-container">
+                    <el-pagination
+                            v-model:current-page="pagination.current_page"
+                            v-model:page-size="pagination.page_size"
+                            :page-sizes="[10, 20, 50]"
+                            layout="total, sizes, prev, pager, next, jumper"
+                            :total="pagination.total_count"
+                            @size-change="handleSizeChange"
+                            @current-change="handleCurrentChange"
+                    />
+                </div>
+            </div>
+            <!-- 新增文档标签页内容 -->
+            <!-- 文档标签页内容 -->
+            <!-- 文档标签页内容 -->
+            <div v-if="activeTab === 'document'">
+                <div class="document-container">
+                    <div class="document-sidebar" :class="{ 'sidebar-hidden': !showLeftSidebar }">
+                        <div class="sidebar-header">
+                            <button class="toggle-btn" @click="toggleLeftSidebar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <el-input
+                                    v-model="documentSearch"
+                                    placeholder="搜索文档..."
+                                    clearable
+                                    prefix-icon="el-icon-search"
+                            ></el-input>
+
+                        </div>
+                        <div class="document-category">
+                            <i class="fas fa-book-open"></i> 使用指南
+                        </div>
+                        <div class="document-list">
+                            <div
+                                    v-for="doc in filteredDocuments"
+                                    :key="doc.id"
+                                    :class="['document-item', { active: currentDocument && doc.id === currentDocument.id }]"
+                                    @click="selectDocument(doc)"
+                            >
+                                <div class="document-title">
+                                    <i class="fas fa-file-alt"></i>{{ doc.title }}
+                                </div>
+                                <div class="document-meta">
+                                    <span class="version">v{{ doc.version }}</span>
+                                    <span>{{ formatDate(doc.updated_at) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="document-content">
+                        <div v-if="currentDocument" class="content-container">
+                                        <div class="content-header-fixed">
+                        <div class="content-header-inner">
+                        <h1 class="document-main-title">{{ currentDocument.title }}</h1>
+                                <div class="header-actions">
+                                    <el-tag v-if="!currentDocument.is_editable" type="info">只读</el-tag>
+                                    <el-button
+                                            v-if="currentDocument.is_editable"
+                                            type="primary"
+                                            @click="toggleEditMode"
+                                    >
+                                        <i class="fas" :class="editMode ? 'fa-eye' : 'fa-edit'"></i>
+                                        {{ editMode ? '预览' : '编辑' }}
+                                    </el-button>
+                                    <el-button
+                                            v-if="editMode && currentDocument.is_editable"
+                                            type="success"
+                                            @click="saveDocument"
+                                            :loading="saving"
+                                    >
+                                        <i class="fas fa-save"></i> 保存
+                                    </el-button>
+                                    <el-button
+                                            v-if="editMode"
+                                            @click="cancelEdit"
+                                    >
+                                        <i class="fas fa-times"></i> 取消
+                                    </el-button>
+                                </div>
+                            </div>
+        </div>
+        <div class="scrollable-content">
+
+                            <div v-if="editMode" class="editor-container">
+                                <el-input
+                                        type="textarea"
+                                        v-model="editContent"
+                                        :autosize="{ minRows: 20, maxRows: 50 }"
+                                        placeholder="输入Markdown内容..."
+                                ></el-input>
+                            </div>
+
+                            <div v-else class="preview-container" @contextmenu="handleContextMenu">
+                                <div class="github-markdown-body markdown-body" v-html="compiledMarkdown"></div>
+                            </div>
+</div>
+        <div class="document-footer-fixed">
+            <div class="document-footer-inner">
+                                <div class="version-info">
+                                    版本: v{{ currentDocument.version }} |
+                                    最后更新: {{ formatDate(currentDocument.updated_at) }}
+                                    by {{ currentDocument.updated_by }}
+                                </div>
+                                <div class="document-actions">
+                                    <el-button size="small" @click="scrollToTop">
+                                        <i class="fas fa-arrow-up"></i> 回到顶部
+                                    </el-button>
+                                </div>
+            </div>
+        </div>
+                        </div>
+
+                        <div v-else class="no-document">
+                            <i class="fas fa-folder-open"></i>
+                            <h3>请从左侧选择文档</h3>
+                            <p>或使用搜索功能查找您需要的文档</p>
+                        </div>
+                    </div>
+
+                    <!-- 右侧目录 -->
+                    <div class="document-toc-sidebar" :class="{ 'toc-hidden': !showRightSidebar }">
+                        <div class="toc-header">
+                            <h3>文档目录</h3>
+                            <button class="toggle-btn" @click="toggleRightSidebar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="toc-container">
+                            <div v-html="tocContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果详情弹窗 -->
+            <el-dialog v-model="showDetail" title="查询结果详情" width="80%" :close-on-click-modal="false">
+                <div v-if="loadingDetail" class="loading">加载中...</div>
+                <div v-else-if="currentResult">
+                    <div class="result-info">
+                        <p><strong>查询实例:</strong> {{ currentResult.query_instance_name }}</p>
+                        <p><strong>状态:</strong> <span
+                                :class="['status-badge', currentResult.status]">{{ currentResult.status === 'success' ? '成功' : '失败' }}</span>
+                        </p>
+                        <p><strong>执行时间:</strong> {{ formatDate(currentResult.created_at) }}</p>
+                        <p><strong>耗时:</strong> {{ currentResult.execution_time.toFixed(2) }} 秒</p>
+                    </div>
+
+                    <div v-if="currentResult.status === 'failed'" class="error-message">
+                        <h3>错误信息:</h3>
+                        <pre>{{ currentResult.error_message }}</pre>
+                    </div>
+
+                    <div v-else-if="currentResult.result_data && currentResult.result_data.length > 0">
+                        <div class="data-header">
+                            <div class="data-info">
+                                共 {{ currentResult.result_data.length }} 条记录
+                            </div>
+                            <div>
+                                <el-button type="success" size="small" @click="exportCurrentData()">导出CSV</el-button>
+                                <el-button type="success" size="small" class="copy-btn" @click="copyCurrentData()">
+                                    复制数据
+                                </el-button>
+
+                                <div class="view-switcher">
+                                    <el-radio-group v-model="detailViewMode" size="small">
+                                        <el-radio-button label="table">表格视图</el-radio-button>
+                                        <el-radio-button label="json">JSON视图</el-radio-button>
+                                    </el-radio-group>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="detailViewMode === 'table'">
+                            <div class="column-filter">
+                                <el-select
+                                        v-model="selectedColumns"
+                                        multiple
+                                        collapse-tags
+                                        collapse-tags-tooltip
+                                        placeholder="选择要显示的列"
+                                        style="width: 100%"
+                                >
+                                    <el-option
+                                            v-for="column in allColumns"
+                                            :key="column"
+                                            :label="column"
+                                            :value="column"
+                                    />
+                                </el-select>
+                            </div>
+
+                            <div class="data-table-container" @contextmenu="handleContextMenu">
+                                <el-table
+                                        :data="currentResult.result_data"
+                                        stripe
+                                        style="width: 100%"
+                                        v-loading="tableLoading"
+                                >
+                                    <el-table-column
+                                            v-for="(key, index) in filteredColumns"
+                                            :key="index"
+                                            :prop="key"
+                                            :label="key"
+                                            :min-width="120"
+                                    >
+                                        <template #default="scope">
+                                            <span v-if="scope.row[key] === null" style="color: #999">NULL</span>
+                                            <span v-else-if="typeof scope.row[key] === 'object'">[Object]</span>
+                                            <span v-else>{{ scope.row[key] }}</span>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+
+                            <div class="result-count">
+                                显示 {{ filteredColumns.length }} 列中的 {{ filteredColumns.length }} 列
+                            </div>
+                        </div>
+
+                        <div v-else>
+                            <div class="json-view" @contextmenu="handleContextMenu"
+                                 v-html="formatJson(currentResult.result_data)"></div>
+                        </div>
+                    </div>
+                    <div v-else>
+                        <p class="no-data">无数据</p>
+                    </div>
+                </div>
+            </el-dialog>
+            <!-- 脚本日志详情弹窗 -->
+            <el-dialog v-model="showScriptLogDetail" :title="currentScriptLog?.script_title + ' - 执行详情'" width="50%"
+                       :close-on-click-modal="false">
+                <div v-if="scriptLogLoading" class="loading">加载中...</div>
+                <div v-else-if="currentScriptLog">
+                    <div class="result-info">
+                        <p><strong>脚本名称:</strong> {{ currentScriptLog.script_title }}</p>
+                        <p><strong>执行人:</strong> {{ currentScriptLog.triggered_by_name }}</p>
+                        <p><strong>执行时间:</strong> {{ formatDate(currentScriptLog.executed_at) }}</p>
+                        <p><strong>状态:</strong>
+                            <span :class="['script-status-badge', currentScriptLog.status]">
+                                {{ currentScriptLog.status === 'success' ? '成功' : currentScriptLog.status === 'failed' ? '失败' : '执行中' }}
+                            </span>
+                        </p>
+                    </div>
+
+                    <div v-if="currentScriptLog.output" class="log-output" @contextmenu="handleContextMenu">
+                        <h4>输出内容:</h4>
+                        <pre :class="currentScriptLog.status">{{ currentScriptLog.output }}</pre>
+                    </div>
+
+                    <div v-if="currentScriptLog.error" class="log-output" @contextmenu="handleContextMenu">
+                        <h4 class="log-error">错误信息:</h4>
+                        <pre class="log-error">{{ currentScriptLog.error }}</pre>
+                    </div>
+                </div>
+            </el-dialog>
+
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <p>© 2025 数据库查询与脚本系统 - 版权所有</p>
+    </footer>
+</div>
+
+<script>
+    const {createApp, ref, reactive, onMounted, computed, toRefs, watch} = Vue;
+    const app = createApp({
+        setup() {
+            // 状态管理
+            const activeTab = ref('document'); // 'query' 或 'script'
+
+            // 状态管理
+            const results = ref([]);
+            const queryInstances = ref([]);
+            const loading = ref(false);
+            const searchQuery = ref('');
+            const statusFilter = ref('');
+            const instanceFilter = ref('');
+            const pagination = reactive({
+                current_page: 1,
+                page_size: 10,
+                total_pages: 1,
+                total_count: 0,
+                has_previous: false,
+                has_next: false,
+            });
+            const showDetail = ref(false);
+            const currentResult = ref(null);
+            const loadingDetail = ref(false);
+            const detailViewMode = ref('table');
+            const selectedColumns = ref([]);
+            const allColumns = ref([]);
+            const tableLoading = ref(false);
+
+            // 防抖函数
+            function debounce(fn, delay = 500) {
+                let timer = null;
+                return function (...args) {
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        fn.apply(this, args);
+                    }, delay);
+                };
+            }
+
+            // 搜索防抖
+            const debounceSearch = debounce(() => {
+                fetchResults();
+            }, 500);
+
+            // 格式化日期
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                });
+            }
+
+            function exportToCSV(data, filename) {
+                if (!data || data.length === 0) {
+                    ElementPlus.ElMessage.warning('没有数据可导出');
+                    return;
+                }
+
+                // 获取所有列名
+                const headers = Object.keys(data[0]);
+
+                // 创建CSV内容
+                let csvContent = headers.join(',') + '\n';
+
+                data.forEach(row => {
+                    const rowData = headers.map(header => {
+                        let cell = row[header];
+                        // 处理null和undefined
+                        if (cell === null || cell === undefined) {
+                            return '';
+                        }
+                        // 处理包含逗号或换行符的字符串
+                        if (typeof cell === 'string') {
+                            return `"${cell.replace(/"/g, '""')}"`;
+                        }
+                        return cell;
+                    });
+                    csvContent += rowData.join(',') + '\n';
+                });
+
+                // 创建Blob对象
+                const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+                const url = URL.createObjectURL(blob);
+
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename || 'export.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // 导出当前结果数据
+            function exportCurrentData() {
+                if (!currentResult.value || !currentResult.value.result_data) {
+                    ElementPlus.ElMessage.warning('没有数据可导出');
+                    return;
+                }
+                const filename = `result_${currentResult.value.query_instance_name}_${new Date().getTime()}.csv`;
+                exportToCSV(currentResult.value.result_data, filename);
+            }
+
+            // 导出单条结果
+            function exportResult(row) {
+                if (!row.result_data) {
+                    ElementPlus.ElMessage.warning('没有数据可导出');
+                    return;
+                }
+                const filename = `result_${row.query_instance_name}_${row.id}.csv`;
+                exportToCSV(row.result_data, filename);
+            }
+
+            function ensureArrayData(data) {
+                if (Array.isArray(data)) {
+                    return data;
+                }
+
+                // 如果是字符串，尝试解析为JSON
+                if (typeof data === 'string') {
+                    try {
+                        const parsed = JSON.parse(data);
+                        return Array.isArray(parsed) ? parsed : [parsed];
+                    } catch (e) {
+                        console.error('解析JSON失败:', e);
+                        return [];
+                    }
+                }
+
+                // 如果是对象，转换为数组
+                if (typeof data === 'object' && data !== null) {
+                    return [data];
+                }
+
+                // 其他情况返回空数组
+                return [];
+            }
+
+            // 复制表格数据到剪贴板
+            function copyTableData(row) {
+                if (!row.result_data) {
+                    ElementPlus.ElMessage.warning('没有数据可复制');
+                    return;
+                }
+                copyDataToClipboard(row.result_data);
+            }
+
+            // 复制当前数据到剪贴板
+            function copyCurrentData() {
+                if (!currentResult.value || !currentResult.value.result_data) {
+                    ElementPlus.ElMessage.warning('没有数据可复制');
+                    return;
+                }
+                copyDataToClipboard(currentResult.value.result_data);
+            }
+
+            // 将数据复制到剪贴板（兼容性处理）
+            // 将数据复制到剪贴板（兼容性处理）
+            function copyDataToClipboard(data) {
+                // 确保数据是数组格式
+                const arrayData = ensureArrayData(data);
+
+                if (arrayData.length === 0) {
+                    ElementPlus.ElMessage.warning('没有数据可复制');
+                    return;
+                }
+
+                // 获取所有列名（从第一条数据中获取）
+                const headers = Object.keys(arrayData[0] || {});
+
+                if (headers.length === 0) {
+                    ElementPlus.ElMessage.warning('数据格式不正确');
+                    return;
+                }
+
+                // 创建制表符分隔的内容
+                let tabContent = headers.join('\t') + '\n';
+
+                arrayData.forEach(row => {
+                    const rowData = headers.map(header => {
+                        let cell = row[header];
+                        // 处理null和undefined
+                        if (cell === null || cell === undefined) {
+                            return '';
+                        }
+                        // 转换为字符串并移除换行符
+                        return String(cell).replace(/[\n\r]/g, ' ');
+                    });
+                    tabContent += rowData.join('\t') + '\n';
+                });
+
+                // 兼容性处理：优先使用Clipboard API，不支持则回退到execCommand
+                const copyToClipboard = (text) => {
+                    return new Promise((resolve, reject) => {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(text).then(resolve).catch(reject);
+                        } else {
+                            // 回退方案
+                            const textarea = document.createElement('textarea');
+                            textarea.value = text;
+                            textarea.style.position = 'fixed';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+
+                            try {
+                                const successful = document.execCommand('copy');
+                                if (successful) {
+                                    resolve();
+                                } else {
+                                    reject(new Error('复制失败'));
+                                }
+                            } catch (err) {
+                                reject(err);
+                            } finally {
+                                document.body.removeChild(textarea);
+                            }
+                        }
+                    });
+                };
+
+                copyToClipboard(tabContent).then(() => {
+                    ElementPlus.ElMessage.success('数据已复制到剪贴板');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    // 如果复制失败，提供手动复制选项
+                    ElementPlus.ElMessageBox.confirm(
+                        '自动复制失败，请手动选择并复制以下内容',
+                        '复制失败',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                            showCancelButton: false
+                        }
+                    ).then(() => {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = tabContent;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        ElementPlus.ElMessage.success('已选中数据，请按Ctrl+C复制');
+                    });
+                });
+            }
+
+            // 获取查询实例列表
+            async function fetchQueryInstances() {
+                try {
+                    const response = await axios.get('/api/query-instances/');
+                    // 确保queryInstances始终是数组且不包含null元素
+                    /**
+                     * 确保queryInstances始终是数组且不包含null元素
+                     * @type {Array}
+                     */
+                    // 从响应数据中提取results数组,不显示id，而是显示name
+                    queryInstances.value = Array.isArray(response.data.results) ? response.data.results.map(instance => ({
+                        id: instance.id,
+                        name: instance.name
+                    })).filter(instance => instance !== null && instance !== undefined) : [];
+                    // console.log(queryInstances.value);
+                } catch (error) {
+                    console.error('获取查询实例失败:', error);
+                }
+            }
+
+            // 获取执行结果
+            async function fetchResults() {
+                loading.value = true;
+                try {
+                    const params = {
+                        page: pagination.current_page,
+                        page_size: pagination.page_size,
+                        search: searchQuery.value,
+                    };
+
+                    if (statusFilter.value) {
+                        params.status = statusFilter.value;
+                    }
+
+                    if (instanceFilter.value) {
+                        params.query_instance = queryInstances.value.filter(instance => instance.name === instanceFilter.value)[0].id; // queryInstances.value.filter(instance => instance.name === instanceFilter.value);
+                    }
+
+                    const response = await axios.get('/api/execution-results/', {params});
+                    // 确保results始终是数组
+                    results.value = Array.isArray(response.data.results) ? response.data.results : [];
+
+                    // 更新分页信息
+                    pagination.total_count = response.data.count;
+                    pagination.total_pages = Math.ceil(response.data.count / 10);
+                    pagination.has_previous = response.data.previous !== null;
+                    pagination.has_next = response.data.next !== null;
+                    ElementPlus.ElMessage.success('数据获取成功');
+                } catch (error) {
+                    ElementPlus.ElMessage.error('数据获取失败');
+                } finally {
+                    loading.value = false;
+                }
+            }
+
+            // 分页处理
+            function handleSizeChange(size) {
+                pagination.page_size = size;
+                fetchResults();
+            }
+
+            function handleCurrentChange(page) {
+                pagination.current_page = page;
+                fetchResults();
+            }
+
+            // 刷新数据
+            function refreshData() {
+                fetchQueryInstances();
+                fetchResults();
+            }
+
+            // 修改viewResult函数确保数据格式正确
+            async function viewResult(id) {
+                loadingDetail.value = true;
+                showDetail.value = true;
+                detailViewMode.value = 'table';
+                try {
+                    const response = await axios.get(`/api/execution-results/${id}/`);
+                    currentResult.value = response.data || {};
+
+                    // 确保result_data是数组格式
+                    currentResult.value.result_data = ensureArrayData(currentResult.value.result_data);
+
+                    // 提取所有列名
+                    if (currentResult.value.result_data.length > 0) {
+                        const allKeys = new Set();
+                        currentResult.value.result_data.forEach(item => {
+                            Object.keys(item).forEach(key => {
+                                allKeys.add(key);
+                            });
+                        });
+                        allColumns.value = Array.from(allKeys);
+                        selectedColumns.value = Array.from(allKeys);
+                    }
+                } catch (error) {
+                    console.error('获取结果详情失败:', error);
+                } finally {
+                    loadingDetail.value = false;
+                }
+            }
+
+            // 计算过滤后的列
+            const filteredColumns = computed(() => {
+                if (!selectedColumns.value || selectedColumns.value.length === 0) {
+                    return allColumns.value;
+                }
+                return selectedColumns.value;
+            });
+
+            // 导出结果
+            async function exportResult(id) {
+                try {
+                    const response = await axios.get(`/api/execution-results/${id}/export/`, {
+                        responseType: 'blob'
+                    });
+                    const blob = new Blob([response.data], {type: 'text/csv'});
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `result_${id}_${new Date().getTime()}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('导出结果失败:', error);
+                }
+            }
+
+            // 格式化JSON为带高亮的HTML
+            function formatJson(data) {
+                if (!data) return '';
+
+                const jsonStr = JSON.stringify(data, null, 2);
+
+                // 高亮语法
+                return jsonStr
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+                        let cls = '';
+                        if (/^"/.test(match)) {
+                            if (/:$/.test(match)) {
+                                cls = 'json-key';
+                            } else {
+                                cls = 'json-string';
+                            }
+                        } else if (/true|false/.test(match)) {
+                            cls = 'json-boolean';
+                        } else if (/null/.test(match)) {
+                            cls = 'json-null';
+                        } else {
+                            cls = 'json-number';
+                        }
+                        return `<span class="${cls}">${match}</span>`;
+                    });
+            }
+
+            // 脚本日志相关状态
+            const scriptLogs = ref([]);
+            const scriptLoading = ref(false);
+            const scriptSearchQuery = ref('');
+            const scriptStatusFilter = ref('');
+            const scriptPagination = reactive({
+                current_page: 1,
+                page_size: 10,
+                total_pages: 1,
+                total_count: 0,
+                has_previous: false,
+                has_next: false,
+            });
+            const showScriptLogDetail = ref(false);
+            const currentScriptLog = ref({});
+            const scriptLogLoading = ref(false);
+
+            // 防抖函数（保持不变）
+
+            // 脚本日志搜索防抖
+            const debounceScriptSearch = debounce(() => {
+                fetchScriptLogs();
+            }, 500);
+
+            // 获取脚本执行日志
+            async function fetchScriptLogs() {
+                scriptLoading.value = true;
+                try {
+                    const params = {
+                        page: scriptPagination.current_page,
+                        page_size: scriptPagination.page_size,
+                        search: scriptSearchQuery.value,
+                    };
+
+                    if (scriptStatusFilter.value) {
+                        params.status = scriptStatusFilter.value;
+                    }
+
+                    const response = await axios.get('/api/execution-logs/', {params});
+                    // 确保scriptLogs始终是数组
+                    scriptLogs.value = Array.isArray(response.data.results) ? response.data.results : [];
+
+                    // 更新分页信息
+                    scriptPagination.total_count = response.data.count;
+                    scriptPagination.total_pages = Math.ceil(response.data.count / scriptPagination.page_size);
+                    scriptPagination.has_previous = response.data.previous !== null;
+                    scriptPagination.has_next = response.data.next !== null;
+                } catch (error) {
+                    console.error('获取脚本日志失败:', error);
+                    ElementPlus.ElMessage.error('获取脚本日志失败');
+                } finally {
+                    scriptLoading.value = false;
+                }
+            }
+
+            // 脚本日志分页处理
+            function handleScriptSizeChange(size) {
+                scriptPagination.page_size = size;
+                fetchScriptLogs();
+            }
+
+            function handleScriptCurrentChange(page) {
+                scriptPagination.current_page = page;
+                fetchScriptLogs();
+            }
+
+            // 查看脚本日志详情
+            async function viewScriptLog(log) {
+                currentScriptLog.value = log;
+                showScriptLogDetail.value = true;
+            }
+
+            // 刷新脚本日志
+            function refreshScriptLogs() {
+                fetchScriptLogs();
+            }
+
+            // 文档相关状态
+            const marked = window.marked;
+            const DOMPurify = window.DOMPurify;
+            marked.setOptions({
+                highlight: function (code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, {language}).value;
+                },
+                langPrefix: 'hljs language-' // 与highlight.js的class匹配
+            });
+            const showLeftSidebar = ref(false);
+            const showRightSidebar = ref(false);
+
+            // 文档相关状态
+            const documents = ref('');
+            const filteredDocuments = ref([]);
+            const documentSearch = ref('');
+            const currentDocument = ref(null);
+            const editMode = ref(false);
+            const editContent = ref('');
+            const editVersion = ref(0);
+            const saving = ref(false);
+            const tocContent = ref('');
+
+// 获取文档列表
+            async function fetchDocuments() {
+                try {
+                    const response = await axios.get('/api/documents/');
+
+                    // 根据你提供的API响应结构，数据在response.data.results中
+                    if (response.data && Array.isArray(response.data.results)) {
+                        documents.value = response.data.results.filter(doc => doc && doc.id);
+                        filteredDocuments.value = [...documents.value];
+                        const indexDoc = documents.value.find(doc => doc.file_name === "index");
+                        if (indexDoc) {
+                            await selectDocument(indexDoc);
+                        } else {
+                            // 如果没有找到index.md，可以选择第一个文档或显示提示
+                            //selectDocument(documents.value[0]);
+                        }
+                    } else {
+                        documents.value = [];
+                        filteredDocuments.value = [];
+                        console.warn('API返回的数据结构不符合预期:', response.data);
+                    }
+
+
+                } catch (error) {
+                    console.error('获取文档列表失败:', error);
+                    ElementPlus.ElMessage.error('获取文档列表失败: ' + (error.response?.data?.message || error.message));
+                }
+            }
+
+// 过滤文档
+            function filterDocuments() {
+                if (!documentSearch.value) {
+                    filteredDocuments.value = documents.value;
+                    return;
+                }
+
+                const searchTerm = documentSearch.value.toLowerCase();
+                filteredDocuments.value = documents.value.filter(doc =>
+                    doc.title.toLowerCase().includes(searchTerm) ||
+                    doc.content.toLowerCase().includes(searchTerm)
+                );
+            }
+
+// 选择文档
+            async function selectDocument(doc) {
+                if (!doc || !doc.id) {
+                    console.error('无效的文档对象:', doc);
+                    ElementPlus.ElMessage.error('无法加载文档: 无效的文档对象');
+                    return;
+                }
+
+                try {
+                    //showRightSidebar.value = true;
+                    // 根据你的API结构，可能需要调整这个请求路径
+                    const response = await axios.get(`/api/documents/${doc.id}/content/`);
+
+                    // 确保获取到的内容是正确的
+                    currentDocument.value = doc;
+                    editContent.value = response.data.content || doc.content || '';
+                    editVersion.value = response.data.version || doc.version || 0;
+                    editMode.value = false;
+                    generateTOC();
+                    // 滚动到顶部
+                    setTimeout(() => {
+                        const container = document.querySelector('.content-container');
+                        if (container) container.scrollTop = 0;
+                    }, 50);
+
+                } catch (error) {
+                    console.error('获取文档内容失败:', error);
+                    ElementPlus.ElMessage.error('获取文档内容失败');
+                }
+            }
+
+// 切换编辑模式
+            function toggleEditMode() {
+                editMode.value = !editMode.value;
+                generateTOC();
+                if (!editMode.value) {
+                    generateTOC();
+                }
+
+            }
+
+// 保存文档
+            async function saveDocument() {
+                saving.value = true;
+                try {
+                    await axios.put(`/api/documents/${currentDocument.value.id}/`, {
+                        title: currentDocument.value.title,
+                        content: editContent.value,
+                        version: editVersion.value,
+                        is_visible: currentDocument.value.is_visible,
+                        is_editable: currentDocument.value.is_editable
+                    });
+
+                    ElementPlus.ElMessage.success('保存成功');
+                    await fetchDocuments(); // 刷新文档列表
+                    //版本加一
+                    editVersion.value = editVersion.value + 1;
+                    // 重新加载当前文档
+                    const updatedDoc = documents.value.find(d => d.id === currentDocument.value.id);
+                    if (updatedDoc) {
+                        await selectDocument(updatedDoc)
+                    }
+                    editMode.value = false;
+                } catch (error) {
+                    if (error.response && error.response.status === 409) {
+                        ElementPlus.ElMessage.error('文档已被更新，请刷新后重试');
+                    } else {
+                        ElementPlus.ElMessage.error('保存失败: ' + (error.response?.data?.message || error.message));
+                    }
+                    console.error('保存文档失败:', error);
+                } finally {
+                    saving.value = false;
+                }
+            }
+
+// 取消编辑
+            async function cancelEdit() {
+                editMode.value = false;
+                await selectDocument(currentDocument.value);
+            }
+
+// 编译Markdown
+            const compiledMarkdown = computed(() => {
+                if (!currentDocument.value) return '';
+                const rawMarkdown = editMode.value ? editContent.value : currentDocument.value.content;
+                const html = marked.parse(rawMarkdown);
+                return DOMPurify.sanitize(html);
+            });
+
+// 生成目录
+            function generateTOC() {
+                if (!currentDocument.value) {
+                    tocContent.value = '';
+                    return;
+                }
+
+                const rawMarkdown = currentDocument.value.content;
+                const tokens = marked.lexer(rawMarkdown);
+                let toc = '<ul>';
+
+                tokens.forEach(token => {
+        if (token.type === 'heading' && token.depth <= 3) {
+            const level = token.depth;
+            const text = token.text;
+            // 修复中文锚点：移除特殊字符后保留中文
+            const slug = text.toLowerCase()
+                .replace(/[^\w\u4e00-\u9fa5]+/g, '-')  // 保留中文和基本字符
+                .replace(/^-+|-+$/g, '');             // 移除首尾的-
+
+            toc += `<li class="toc-h${level}"><a href="#${slug}">${text}</a></li>`;
+        }
+                });
+
+                toc += '</ul>';
+                tocContent.value = toc;
+            }
+
+            // 切换左侧边栏
+            function toggleLeftSidebar() {
+                showLeftSidebar.value = !showLeftSidebar.value;
+            }
+
+            // 切换右侧边栏
+            function toggleRightSidebar() {
+                showRightSidebar.value = !showRightSidebar.value;
+            }
+
+            // 刷新文档
+            async function refreshDocument() {
+                try {
+                    await fetchDocuments();
+                    ElementPlus.ElMessage.success('文档已刷新');
+                    if (currentDocument.value) {
+                        await selectDocument(currentDocument.value);
+                    }
+                } catch (e) {
+                    console.log(e);
+                    ElementPlus.ElMessage.error('文档刷新失败');
+                }
+            }
+
+            // 滚动到顶部
+            function scrollToTop() {
+                const container = document.querySelector('.content-container');
+                if (container) {
+                    container.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            const copySelectedText = () => {
+                const selectedText = window.getSelection().toString();
+                if (selectedText) {
+                    try {
+                        navigator.clipboard.writeText(selectedText)
+                            .then(() => {
+                                ElementPlus.ElMessage.success('已复制选中文本');
+                            })
+                            .catch(err => {
+                                console.error('复制失败:', err);
+                                ElementPlus.ElMessage.error('复制失败');
+                            });
+
+                    } catch (e) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = selectedText;
+                        textarea.style.position = 'fixed';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+
+                        try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                                ElementPlus.ElMessage.success('数据已复制到剪贴板');
+
+                            } else {
+                                ElementPlus.ElMessage.error('复制失败');
+                            }
+                        } catch (err) {
+                            reject(err);
+                        } finally {
+                            document.body.removeChild(textarea);
+                        }
+
+                    }
+                }
+            };
+
+// 添加右键菜单处理函数
+            const handleContextMenu = (e) => {
+                e.preventDefault();
+                copySelectedText();
+            };
+
+            // 组件挂载时执行
+            onMounted(() => {
+                try {
+                    fetchQueryInstances();
+
+                } finally {
+
+                }
+                try {
+                    fetchResults();
+
+                } finally {
+
+                }
+                try {
+                    fetchScriptLogs();
+
+                } finally {
+
+                }
+                try {
+                    fetchDocuments();
+
+                } finally {
+
+                }
+                // 默认加载第一页脚本日志
+            });
+
+            return {
+                activeTab,
+                showLeftSidebar,
+                showRightSidebar,
+                scriptLogs,
+                scriptLoading,
+                scriptSearchQuery,
+                scriptStatusFilter,
+                scriptPagination,
+                showScriptLogDetail,
+                currentScriptLog,
+                scriptLogLoading,
+                debounceScriptSearch,
+                fetchScriptLogs,
+                handleScriptSizeChange,
+                handleScriptCurrentChange,
+                viewScriptLog,
+                refreshScriptLogs,
+                searchQuery,
+                statusFilter,
+                instanceFilter,
+                results,
+                pagination,
+                loading,
+                showDetail,
+                currentResult,
+                loadingDetail,
+                queryInstances,
+                detailViewMode,
+                selectedColumns,
+                allColumns,
+                filteredColumns,
+                tableLoading,
+                debounceSearch,
+                formatDate,
+                fetchResults,
+                handleSizeChange,
+                handleCurrentChange,
+                viewResult,
+                exportResult,
+                refreshData,
+                formatJson,
+                exportCurrentData,
+                copyTableData,
+                copyCurrentData,
+                // 文档相关 - 修复未定义变量
+                filteredDocuments,
+                documentSearch,
+                currentDocument,
+                editMode,
+                editContent,
+                saving,
+                tocContent,
+                compiledMarkdown,
+
+                // 文档方法
+                filterDocuments,
+                selectDocument,
+                toggleEditMode,
+                saveDocument,
+                cancelEdit,  // 使用已存在的 cancelEdit 函数
+                toggleLeftSidebar,
+                toggleRightSidebar,
+                refreshDocument,
+                scrollToTop, handleContextMenu
+
+            };
+        }
+    });
+
+    // 使用Element Plus
+    app.use(ElementPlus);
+    app.mount('#app');
+</script>
+</body>
+</html>

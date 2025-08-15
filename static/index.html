@@ -300,6 +300,179 @@
             color: #666;
             font-size: 14px;
         }
+        /* 新增文档样式 */
+        .document-container {
+            display: flex;
+            height: calc(100vh - 200px);
+            margin-top: 20px;
+        }
+
+        .document-sidebar {
+            width: 250px;
+            padding: 16px;
+            border-right: 1px solid #eaeaea;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+
+        .document-content {
+            flex: 1;
+            padding: 16px 32px;
+            overflow-y: auto;
+        }
+
+        .document-toc {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .document-toc-item {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .document-toc-item:hover {
+            background-color: #e9ecef;
+        }
+
+        .document-toc-item.active {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+            font-weight: 500;
+        }
+
+        .toc-h1 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .toc-h2 {
+            font-size: 14px;
+            padding-left: 16px;
+        }
+
+        .toc-h3 {
+            font-size: 13px;
+            padding-left: 32px;
+            color: #6c757d;
+        }
+
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .document-title {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .document-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .github-markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .github-markdown-body h1,
+        .github-markdown-body h2 {
+            padding-bottom: 0.3em;
+            border-bottom: 1px solid #eaeaea;
+            margin-top: 24px;
+            margin-bottom: 16px;
+        }
+
+        .github-markdown-body h3 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+        }
+
+        .github-markdown-body pre {
+            padding: 16px;
+            overflow: auto;
+            font-size: 85%;
+            line-height: 1.45;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+        }
+
+        .github-markdown-body code {
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            background-color: rgba(175,184,193,0.2);
+            border-radius: 6px;
+        }
+
+        .github-markdown-body table {
+            display: block;
+            width: 100%;
+            overflow: auto;
+            border-spacing: 0;
+            border-collapse: collapse;
+        }
+
+        .github-markdown-body th {
+            font-weight: 600;
+        }
+
+        .github-markdown-body th,
+        .github-markdown-body td {
+            padding: 6px 13px;
+            border: 1px solid #d0d7de;
+        }
+
+        .github-markdown-body tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+
+        .editor-container {
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .markdown-editor {
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            border: none;
+            resize: none;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .document-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .version-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
 
     </style>
 </head>

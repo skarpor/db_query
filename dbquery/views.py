@@ -149,6 +149,8 @@ class ExecutionResultViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
+@authentication_classes([])
+@permission_classes([AllowAny])
 class ExecutionLogList(generics.ListAPIView):
     serializer_class = ExecutionLogSerializer
 
